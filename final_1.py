@@ -3,7 +3,7 @@ import pygame,sys
 from pygame.locals import *
 from PIL import *
 import LevelDefines as level
-data = {"screen_width": 1680, "screen_height": 1050, "scr": "1680x1050", "fps":30}
+data = {"screen_width": 1680, "screen_height": 1050, "scr": "1680x1050", "fps":30,"control_mode":"mouse"}
 try:
     with open('settings.txt') as setfile:
         data = json.load(setfile)
@@ -130,20 +130,31 @@ def calculate_ball_speed(remaining_blocks):
 class Paddle():
     def __init__(self):
         self.reset()
-        self.image=pygame.image.load('assets/paddle.png').convert_alpha()
+        self.image = pygame.image.load('assets/paddle.png').convert_alpha()
+        self.direction = 0  # 0 means no movement, -1 for left, 1 for right
+        self.last_input = "none"  # Track last input method
 
     def move(self):
+     if data["control_mode"] == "mouse":
         mouse_x, mouse_y = pygame.mouse.get_pos()
         self.x = mouse_x - self.width // 2
+     elif data["control_mode"] == "keyboard":
+        keys = pygame.key.get_pressed()
+        if keys[pygame.K_LEFT]:
+            self.x -= self.speed
+        if keys[pygame.K_RIGHT]:
+            self.x += self.speed
 
-        # Ensure the paddle stays within the screen boundaries
-        if self.x < 0:
-            self.x = 0
-        elif self.x + self.width > scrw:
-            self.x = scrw - self.width
+    # Ensure the paddle stays within the screen boundaries
+     if self.x < 0:
+        self.x = 0
+     elif self.x + self.width > scrw:
+        self.x = scrw - self.width
 
-        self.y = scrh - self.height
-        self.rect = Rect(self.x, self.y, self.width, self.height)
+     self.y = scrh - self.height
+     self.rect = Rect(self.x, self.y, self.width, self.height)
+
+
     def draw(self):
         screen.blit(self.image, (self.rect.x, self.rect.y))
 
@@ -155,7 +166,9 @@ class Paddle():
         self.y = scrh - (self.height * 2)
         self.speed = 10
         self.rect = Rect(self.x, self.y, self.width, self.height)
-        self.direction = 0
+        self.direction = 0  # reset direction
+        self.last_input = "none"  # reset last input method
+
 
 # ball class
 class GameBall():
@@ -365,6 +378,7 @@ while waiting_for_input:
         elif event.type == pygame.KEYDOWN:
             if event.key == pygame.K_f:
                 pygame.display.toggle_fullscreen()
+            
             if event.key == pygame.K_SPACE and not live_ball:
                 # Start the game when space is pressed and the ball is not live
                 live_ball = True
@@ -374,6 +388,11 @@ while waiting_for_input:
                 balls[0].reset(player_paddle.x + (player_paddle.width // 2), player_paddle.y - player_paddle.height)
                 clock = pygame.time.Clock()
                 score = 0
+            elif event.key == pygame.K_m:  # Let's say 'M' is used to toggle control mode
+              data["control_mode"] = "keyboard" if data["control_mode"] == "mouse" else "mouse"
+              with open('settings.txt', 'w') as setfile:
+                json.dump(data, setfile)
+
             elif event.key ==K_RETURN:
                 level_number+=1
                 live_ball = True
