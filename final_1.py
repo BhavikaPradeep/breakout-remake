@@ -165,88 +165,79 @@ class GameBall():
         self.remaining_blocks = len(matrix) * len(matrix[0])
 
     def move(self):
-        # collision threshold
-        collision_thresh = 6
-        wall_destroyed = 1
-        row_count = 0
+    # collision threshold
+     collision_thresh = 6
+     wall_destroyed = 1
+     row_count = 0
 
-        for row in wall.blocks:
-            item_count = 0
-            for item in row:
-                # check collision
-                if self.rect.colliderect(item[0]):
-                    # check if collision was from above
-                    if abs(self.rect.bottom - item[0].top) < collision_thresh and self.speed_y > 0:
-                        self.speed_y *= -1
-                    # check if collision was from below
-                    if abs(self.rect.top - item[0].bottom) < collision_thresh and self.speed_y < 0:
-                        self.speed_y *= -1
-                    # check if collision was from left
-                    if abs(self.rect.right - item[0].left) < collision_thresh and self.speed_x > 0:
-                        self.speed_x *= -1
-                    # check if collision was from right
-                    if abs(self.rect.left - item[0].right) < collision_thresh and self.speed_x < 0:
-                        self.speed_x *= -1
+     for row in wall.blocks:
+        item_count = 0
+        for item in row:
+            # check collision
+            if self.rect.colliderect(item[0]):
+                # Handle block collision (same as before)
+                if abs(self.rect.bottom - item[0].top) < collision_thresh and self.speed_y > 0:
+                    self.speed_y *= -1
+                elif abs(self.rect.top - item[0].bottom) < collision_thresh and self.speed_y < 0:
+                    self.speed_y *= -1
+                elif abs(self.rect.right - item[0].left) < collision_thresh and self.speed_x > 0:
+                    self.speed_x *= -1
+                elif abs(self.rect.left - item[0].right) < collision_thresh and self.speed_x < 0:
+                    self.speed_x *= -1
 
-                    # reduce the block's strength by doing damage to block
-                    if wall.blocks[row_count][item_count][1] > 1:
-                        wall.blocks[row_count][item_count][1] -= 1
-                        global score
-                        score += 10
+                # Reduce the block's strength (same as before)
+                if wall.blocks[row_count][item_count][1] > 1:
+                    wall.blocks[row_count][item_count][1] -= 1
+                    global score
+                    score += 10
+                if random.random() < 0.005:  # 1% chance of power-up
+                    powerup.spawn_power_ups()
+                elif wall.blocks[row_count][item_count][1] == 1:
+                    wall.blocks[row_count][item_count][1] -= 1
+                    wall.blocks[row_count][item_count][0] = (0, 0, 0, 0)
+                    score += 10
                     if random.random() < 0.005:  # 1% chance of power-up
-                        powerup.spawn_power_ups()    
-                    elif wall.blocks[row_count][item_count][1] == 1:
-                        wall.blocks[row_count][item_count][1] -= 1
-                        wall.blocks[row_count][item_count][0] = (0, 0, 0, 0)
-                        score += 10
-                        # Power-up: 5 Ball
-                        if random.random() < 0.005:  # 1% chance of power-up
-                            powerup.spawn_power_ups()
-                            
-                # check if block still exists, in which case the wall is not destroyed
-                if wall.blocks[row_count][item_count][0] != (0, 0, 0, 0):
-                    wall_destroyed = 0
+                        powerup.spawn_power_ups()
 
-                # increase item counter
-                item_count += 1
+            # Check if block still exists (same as before)
+            if wall.blocks[row_count][item_count][0] != (0, 0, 0, 0):
+                wall_destroyed = 0
 
-            # increase row counter
-            row_count += 1
+            item_count += 1
+        row_count += 1
 
-        # after iterating through all the blocks, check if the wall is destroyed
-        if wall_destroyed == 1:
-            self.game_over = 1
-        elif self.rect.bottom > scrh:
-            self.game_over = -1
-            self.live_ball = False    
-        # check for collision with walls
-        if self.rect.left < 0:
-            self.speed_x = abs(self.speed_x)  # Reverse direction
-            self.rect.left = 0  # Adjust position to stay within the screen
-        elif self.rect.right > scrw:
-            self.speed_x = -abs(self.speed_x)  # Reverse direction
-            self.rect.right = scrw  # Adjust position to stay within the screen
+     if wall_destroyed == 1:
+        self.game_over = 1
+     elif self.rect.bottom > scrh:
+        self.game_over = -1
+        self.live_ball = False    
+    # Collision with walls
+     if self.rect.left < 0:
+        self.speed_x = abs(self.speed_x)
+        self.rect.left = 0
+     elif self.rect.right > scrw:
+        self.speed_x = -abs(self.speed_x)
+        self.rect.right = scrw
 
-        # check for collision with top and bottom of the screen
-        if self.rect.top < 0:
+     if self.rect.top < 0:
+        self.speed_y *= -1
+
+    # Paddle collision logic
+     if self.rect.colliderect(player_paddle.rect):
+        if abs(self.rect.bottom - player_paddle.rect.top) < collision_thresh and self.speed_y > 0:
             self.speed_y *= -1
-        # look for collision with paddle
-        if self.rect.colliderect(player_paddle.rect):
-            # check if colliding from the top
-            if abs(self.rect.bottom - player_paddle.rect.top) < collision_thresh and self.speed_y > 0:
-                self.speed_y *= -1
-                self.speed_x += player_paddle.direction
-                if self.speed_x > self.speed_max:
-                    self.speed_x = self.speed_max
-                elif self.speed_x < 0 and self.speed_x < -self.speed_max:
-                    self.speed_x = -self.speed_max
-            else:
-                self.speed_max = calculate_ball_speed(ball.remaining_blocks)
+            
+            # Calculate the hit position on the paddle
+            hit_pos = (self.rect.centerx - player_paddle.rect.centerx) / (player_paddle.width / 2)
+            self.speed_x = hit_pos * 5  # Scale the speed based on hit position
+            self.speed_x = max(min(self.speed_x, 5), -5)  # Ensure speed is within limits
 
-        self.rect.x += self.speed_x
-        self.rect.y += self.speed_y
+     self.rect.x += self.speed_x
+     self.rect.y += self.speed_y
 
-        return self.game_over
+     return self.game_over
+
+
 
     def draw(self):
         screen.blit(self.image, (self.rect.x, self.rect.y))
